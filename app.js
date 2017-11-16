@@ -1,6 +1,13 @@
 // Requires
 const http = require('http');
 const httpProxy = require('http-proxy');
+const tls = require('tls');
+const fs = require('fs');
+const path = require('path');
+
+// Read all certs from certbot into an object
+let certs = readCerts("/etc/letsencrypt/live");
+console.log(certs);
 
 // Create a new reverse proxy
 const proxy = httpProxy.createProxyServer();
@@ -31,10 +38,10 @@ http.createServer((req,res) => {
     port = 5000; // app: certbot-helper
   }
   else if(subDomain == '' || subDomain == 'www'){
-    port = 4001;
+    port = 4001; // app: testapp
   }
   else if(subDomain == 'cooling'){
-    port = 3000;
+    port = 3000; // app: example
   }
   else {
     res.statusCode = 500;
@@ -67,3 +74,21 @@ function setResponseHeaders(req,res){
 
 }
 
+function readCerts(pathToCerts){
+
+  let certs = {},
+      domains = fs.readdirSync(pathToCerts);
+
+  // Read all ssl certs into memory from file
+  for(let domain of domains){
+    let domainName = domain.split('-0')[0];
+    certs[domainName] = {
+      key:  fs.readFileSync(path.join(pathToCerts,domain,'privkey.pem')),
+      cert: fs.readFileSync(path.join(pathToCerts,domain,'fullchain.pem'))
+    };
+    certs[domainName].secureContext = tls.createSecureContext(certs[domainName]);
+  }
+
+  return certs;
+
+}
