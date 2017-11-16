@@ -1,5 +1,6 @@
 // Requires
 const http = require('http');
+const https = require('https');
 const httpProxy = require('http-proxy');
 const tls = require('tls');
 const fs = require('fs');
@@ -19,7 +20,12 @@ proxy.on('error',function(e){
 })
 
 // Create a new webserver
-http.createServer((req,res) => {
+https.createServer({
+  // SNICallback lets us get the correct cert
+  SNICallback: (domain, callback) => callback(null, certs[domain].secureContext),
+  key: certs['davidbottiger.se'].key,
+  cert: certs['davidbottiger.se'].cert
+},(req,res) => {
 
   // Set/replace response headers
   setResponseHeaders(req,res);
@@ -52,7 +58,7 @@ http.createServer((req,res) => {
     proxy.web(req,res,{target:'http://127.0.0.1:' + port});
   }
 
-}).listen(80);
+}).listen(443);
 
 
 function setResponseHeaders(req,res){
